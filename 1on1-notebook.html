@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1-on-1 Notebook</title>
+<style>
+  :root {
+    --bg: #f6f4ef;
+    --bg-panel: #ffffff;
+    --bg-sidebar: #232220;
+    --ink: #232220;
+    --ink-soft: #6b6660;
+    --line: #e2ddd2;
+    --accent: #a8502f;
+    --accent-soft: #f1ddd2;
+    --good: #4f7a5c;
+    --good-soft: #e3ecdf;
+    --warn: #b8862e;
+    --warn-soft: #f5e9d3;
+    --locked: #6b6660;
+    --radius: 10px;
+    --sidebar-w: 240px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  }
+
+  body {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ---------- Sidebar ---------- */
+  #sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    background: var(--bg-sidebar);
+    color: #ece8e1;
+    display: flex;
+    flex-direction: column;
+    padding: 22px 16px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  #sidebar .brand {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 18px;
+    letter-spacing: 0.02em;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #fff;
+  }
+  #sidebar .brand-sub {
+    font-size: 11.5px;
+    color: #a39c8f;
+    margin-bottom: 22px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  #people-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  #people-list li { margin-bottom: 4px; }
+
+  .person-btn {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: #d8d3c8;
+    padding: 9px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 14.5px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    transition: background 0.15s ease;
+  }
+  .person-btn:hover { background: #34322e; }
+  .person-btn.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  .person-btn .nm {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .person-btn .pending-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--warn);
+    flex-shrink: 0;
+    display: none;
+  }
+  .person-btn.has-pending .pending-dot { display: inline-block; }
+  .person-btn.active .pending-dot { background: #fff; }
+
+  #add-person-row {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #3a3833;
+  }
+
+  #add-person-form {
+    display: flex;
+    gap: 6px;
+  }
+
+  #new-person-input {
+    flex: 1;
+    background: #2c2a26;
+    border: 1px solid #45423c;
+    color: #fff;
+    border-radius: 7px;
+    padding: 8px 9px;
+    font-size: 13.5px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-width: 0;
+  }
+  #new-person-input::placeholder { color: #837d70; }
+  #new-person-input:focus { outline: 1px solid var(--accent); }
+
+  #add-person-form button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-size: 13.5px;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 600;
+  }
+  #add-person-form button:hover { background: #8e4226; }
+
+  .empty-people-hint {
+    color: #8d877a;
+    font-size: 12.5px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 10px 4px;
+    line-height: 1.5;
+  }
+
+  /* ---------- Main ---------- */
+  #main {
+    flex: 1;
+    min-width: 0;
+    padding: 36px 48px 80px;
+    max-width: 880px;
+  }
+
+  #no-person-state {
+    margin-top: 80px;
+    text-align: center;
+    color: var(--ink-soft);
+  }
+  #no-person-state h1 {
+    font-size: 26px;
+    margin-bottom: 8px;
+    color: var(--ink);
+  }
+  #no-person-state p {
+    font-size: 15px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  .person-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    gap: 16px;
+  }
+
+  .person-header h1 {
+    font-size: 30px;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  #rename-btn, #delete-person-btn {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12.5px;
+    background: none;
+    border: none;
+    color: var(--ink-soft);
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+  #rename-btn:hover, #delete-person-btn:hover { color: var(--accent); }
+
+  .person-subline {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin-bottom: 28px;
+  }
+
+  /* Week nav */
+  #week-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 22px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  .week-nav-btn {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .week-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .week-nav-btn:disabled { opacity: 0.35; cursor: default; }
+  .week-nav-btn:disabled:hover { border-color: var(--line); color: var(--ink); }
+
+  #week-label {
+    font-size: 14.5px;
+    font-weight: 600;
+    flex: 1;
+    text-align: center;
+    color: var(--ink);
+  }
+  #week-status-pill {
+    font-size: 11.5px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .pill-open { background: var(--good-soft); color: var(--good); }
+  .pill-locked { background: #ece9e2; color: var(--locked); }
+
+  /* Cards */
+  .card {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 18px;
+  }
+
+  .card-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .card-title h2 {
+    font-size: 15.5px;
+    margin: 0;
+    font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    letter-spacing: 0.01em;
+  }
+  .card-title .count-badge {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  .card-hint {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    margin-bottom: 12px;
+  }
+
+  /* From last week banner */
+  .carry-card {
+    background: var(--warn-soft);
+    border: 1px solid #e6cd96;
+  }
+  .carry-card .card-title h2 { color: #8a611f; }
+  .carry-label {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #8a611f;
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: inline-block;
+  }
+  .carry-group { margin-bottom: 14px; }
+  .carry-group:last-child { margin-bottom: 0; }
+  .carry-group-title {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #6b4c14;
+    margin-bottom: 6px;
+  }
+  .carry-item {
+    background: rgba(255,255,255,0.55);
+    border: 1px solid #e6cd96;
+    border-radius: 7px;
+    padding: 8px 10px;
+    font-size: 14px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .carry-item input[type=checkbox] {
+    margin-top: 3px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .carry-item.resolved-item span {
+    text-decoration: line-through;
+    color: var(--ink-soft);
+  }
+  .carry-item-text { flex: 1; line-height: 1.4; }
+
+  /* Lists (topics / questions / notes-to-self) */
+  .item-list {
+    list-style: none;
+    margin: 0 0 10px 0;
+    padding: 0;
+  }
+  .item-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-row textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    resize: none;
+    font-family: inherit;
+    font-size: 14.5px;
+    line-height: 1.45;
+    color: var(--ink);
+    padding: 2px 0;
+    overflow: hidden;
+  }
+  .item-row textarea:focus { outline: none; }
+  .item-row textarea::placeholder { color: #b9b2a4; }
+
+  .item-row .bullet {
+    color: var(--accent);
+    font-size: 15px;
+    line-height: 1.6;
+    margin-top: 1px;
+    user-select: none;
+  }
+
+  .remove-item-btn {
+    background: none;
+    border: none;
+    color: #c7c0b3;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .remove-item-btn:hover { color: var(--accent); background: var(--accent-soft); }
+
+  .add-item-btn {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: none;
+    border: 1px dashed var(--line);
+    color: var(--ink-soft);
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+  }
+  .add-item-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* questions answered checkbox state */
+  .item-row.question-row { align-items: flex-start; }
+  .item-row.question-row input[type=checkbox] {
+    margin-top: 5px;
+    accent-color: var(--good);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .item-row.question-row.answered textarea {
+    text-decoration: line-through;
+    color: var(--ink-soft);
+  }
+
+  /* free notes textarea */
+  #notes-area {
+    width: 100%;
+    min-height: 140px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 12px;
+    font-family: inherit;
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--ink);
+    resize: vertical;
+    background: #fdfcf9;
+  }
+  #notes-area:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
+  /* Finalize bar */
+  #finalize-bar {
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(to top, var(--bg) 60%, rgba(246,244,239,0));
+    padding: 18px 0 4px;
+    margin-top: 6px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .btn {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(168,80,47,0.25);
+  }
+  .btn-primary:hover { background: #8e4226; }
+  .btn-secondary {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    color: var(--ink);
+  }
+  .btn-secondary:hover { border-color: var(--ink-soft); }
+
+  .locked-banner {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    color: var(--locked);
+    background: #ece9e2;
+    border-radius: 7px;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .locked-banner span.lock-icon { margin-right: 6px; }
+
+  fieldset.week-fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+  }
+  fieldset.week-fieldset[disabled] .card {
+    opacity: 0.85;
+  }
+  fieldset.week-fieldset[disabled] textarea,
+  fieldset.week-fieldset[disabled] #notes-area {
+    background: #fbfaf7;
+    color: var(--ink-soft);
+  }
+  fieldset.week-fieldset[disabled] .add-item-btn,
+  fieldset.week-fieldset[disabled] .remove-item-btn {
+    display: none;
+  }
+  fieldset.week-fieldset[disabled] .item-row {
+    cursor: default;
+  }
+
+  /* modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(35,34,32,0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--bg-panel);
+    border-radius: 12px;
+    padding: 24px 26px;
+    width: 360px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  .modal-box h3 {
+    margin: 0 0 8px;
+    font-family: Georgia, serif;
+    font-size: 18px;
+  }
+  .modal-box p {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin: 0 0 18px;
+  }
+  .modal-box input[type=text] {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    font-size: 14px;
+    margin-bottom: 16px;
+    font-family: inherit;
+  }
+  .modal-box input[type=text]:focus { outline: 1px solid var(--accent); }
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--ink);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13.5px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 100;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #sidebar {
+      width: 100%;
+      height: auto;
+      position: relative;
+      flex-direction: row;
+      align-items: center;
+      overflow-x: auto;
+      padding: 14px 16px;
+    }
+    #sidebar .brand, #sidebar .brand-sub { display: none; }
+    #people-list { display: flex; flex: none; gap: 6px; overflow-x: auto; }
+    #people-list li { margin-bottom: 0; }
+    #add-person-row { margin: 0 0 0 10px; padding: 0; border: none; flex-shrink: 0; }
+    #add-person-form { width: 200px; }
+    #main { padding: 24px 18px 60px; max-width: 100%; }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+</style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">1-on-1 Notebook</div>
+  <div class="brand-sub">Weekly check-ins</div>
+  <ul id="people-list"></ul>
+  <div id="add-person-row">
+    <form id="add-person-form">
+      <input type="text" id="new-person-input" placeholder="Add a person…" maxlength="60" autocomplete="off">
+      <button type="submit">Add</button>
+    </form>
+  </div>
+</nav>
+
+<main id="main">
+  <div id="no-person-state">
+    <h1>No one here yet</h1>
+    <p>Add the first person you meet with using the box in the sidebar.</p>
+  </div>
+
+  <div id="person-view" style="display:none;">
+    <div class="person-header">
+      <h1 id="person-name-display"></h1>
+      <div style="display:flex; gap:14px;">
+        <button id="rename-btn" type="button">Rename</button>
+        <button id="delete-person-btn" type="button">Remove person</button>
+      </div>
+    </div>
+    <div class="person-subline" id="person-subline"></div>
+
+    <div id="week-nav">
+      <button class="week-nav-btn" id="prev-week-btn" title="Previous week">&#8249;</button>
+      <div id="week-label">Week of —</div>
+      <span id="week-status-pill" class="pill-open">Open</span>
+      <button class="week-nav-btn" id="next-week-btn" title="Next week">&#8250;</button>
+    </div>
+
+    <div id="locked-banner-slot"></div>
+
+    <fieldset class="week-fieldset" id="week-fieldset">
+
+      <div class="card carry-card" id="carry-card" style="display:none;">
+        <span class="carry-label">From last week</span>
+        <div id="carry-content"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Discussion topics</h2>
+        </div>
+        <div class="card-hint">What they're working on, anything brought up this week.</div>
+        <ul class="item-list" id="topics-list"></ul>
+        <button class="add-item-btn" id="add-topic-btn" type="button">+ Add a topic</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Unanswered questions</h2>
+        </div>
+        <div class="card-hint">Couldn't answer yet — check the box once it's resolved, or it'll carry to next week.</div>
+        <ul class="item-list" id="questions-list"></ul>
+        <button class="add-item-btn" id="add-question-btn" type="button">+ Add a question</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>To note for next week</h2>
+        </div>
+        <div class="card-hint">Things to remember or bring up at the next 1-on-1.</div>
+        <ul class="item-list" id="nextweek-list"></ul>
+        <button class="add-item-btn" id="add-nextweek-btn" type="button">+ Add a note for next week</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Notes</h2>
+        </div>
+        <div class="card-hint">Freeform — anything else worth keeping.</div>
+        <textarea id="notes-area" placeholder="Type general notes here…"></textarea>
+      </div>
+
+    </fieldset>
+
+    <div id="finalize-bar">
+      <button class="btn btn-secondary" id="unlock-btn" type="button" style="display:none;">Unlock this week</button>
+      <button class="btn btn-primary" id="finalize-btn" type="button">Finalize week</button>
+    </div>
+  </div>
+</main>
+
+<div class="modal-overlay" id="rename-modal">
+  <div class="modal-box">
+    <h3>Rename</h3>
+    <p>Update this person's name. Their history stays intact.</p>
+    <input type="text" id="rename-input" maxlength="60">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="rename-cancel" type="button">Cancel</button>
+      <button class="btn btn-primary" id="rename-confirm" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal-box">
+    <h3>Remove this person?</h3>
+    <p>This deletes all of their weekly notes permanently. This can't be undone.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="delete-cancel" type="button">Cancel</button>
+      <button class="btn btn-primary" id="delete-confirm" type="button" style="background:#a8502f;">Remove</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "oneonone_notebook_v1";
+
+  /* ---------------- Date helpers ---------------- */
+  function startOfWeek(d) {
+    var date = new Date(d);
+    var day = date.getDay(); // 0 Sun .. 6 Sat
+    var diff = (day === 0 ? -6 : 1 - day); // make Monday start
+    date.setDate(date.getDate() + diff);
+    date.setHours(0,0,0,0);
+    return date;
+  }
+  function isoDate(d) {
+    var date = new Date(d);
+    date.setHours(0,0,0,0);
+    var y = date.getFullYear();
+    var m = String(date.getMonth()+1).padStart(2,'0');
+    var day = String(date.getDate()).padStart(2,'0');
+    return y + "-" + m + "-" + day;
+  }
+  function addDays(d, n) {
+    var date = new Date(d);
+    date.setDate(date.getDate() + n);
+    return date;
+  }
+  function fmtWeekLabel(weekStartIso) {
+    var start = new Date(weekStartIso + "T00:00:00");
+    var end = addDays(start, 6);
+    var opts = { month: 'short', day: 'numeric' };
+    var startStr = start.toLocaleDateString(undefined, opts);
+    var endStr = end.toLocaleDateString(undefined, opts);
+    return "Week of " + startStr + " – " + endStr + ", " + start.getFullYear();
+  }
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  /* ---------------- State ---------------- */
+  // state.people = [{id, name, weeks: { [weekStartIso]: weekObj }, weekOrder: [iso,...] }]
+  var state = { people: [], activePersonId: null };
+
+  function emptyWeek(weekStartIso) {
+    return {
+      weekStart: weekStartIso,
+      locked: false,
+      topics: [],
+      questions: [],      // {id, text, resolved}
+      nextWeekNotes: [],  // {id, text}
+      notes: "",
+      carryFrom: null,    // weekStartIso this week's "from last week" came from
+      carryQuestions: [], // [{id, text, resolved}] snapshot shown as "from last week"
+      carryNotes: []      // [{id, text}]
+    };
+  }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.people)) {
+          state = parsed;
+          return;
+        }
+      }
+    } catch (e) { console.error("Failed to load notebook state", e); }
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.error("Failed to save notebook state", e);
+      showToast("Couldn't save — storage may be full.");
+    }
+  }
+
+  function getPerson(id) {
+    for (var i = 0; i < state.people.length; i++) {
+      if (state.people[i].id === id) return state.people[i];
+    }
+    return null;
+  }
+
+  function currentWeekStartIso() {
+    return isoDate(startOfWeek(new Date()));
+  }
+
+  function ensureWeek(person, weekStartIso) {
+    if (!person.weeks[weekStartIso]) {
+      person.weeks[weekStartIso] = emptyWeek(weekStartIso);
+      person.weekOrder.push(weekStartIso);
+      person.weekOrder.sort();
+    }
+    return person.weeks[weekStartIso];
+  }
+
+  /* Active week being viewed per person, kept in memory (not persisted) */
+  var viewingWeek = {}; // personId -> weekStartIso
+
+  /* ---------------- Rendering: sidebar ---------------- */
+  function renderSidebar() {
+    var list = document.getElementById("people-list");
+    list.innerHTML = "";
+    state.people.forEach(function (p) {
+      var li = document.createElement("li");
+      var btn = document.createElement("button");
+      btn.className = "person-btn" + (p.id === state.activePersonId ? " active" : "");
+      var hasPending = personHasPendingCarry(p);
+      if (hasPending) btn.className += " has-pending";
+
+      var dot = document.createElement("span");
+      dot.className = "pending-dot";
+      dot.title = "Has unresolved items from last week";
+
+      var nm = document.createElement("span");
+      nm.className = "nm";
+      nm.textContent = p.name;
+
+      btn.appendChild(nm);
+      btn.appendChild(dot);
+      btn.addEventListener("click", function () {
+        state.activePersonId = p.id;
+        save();
+        renderAll();
+      });
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+
+    if (state.people.length === 0) {
+      var hint = document.createElement("div");
+      hint.className = "empty-people-hint";
+      hint.textContent = "Add someone you meet with regularly to start their weekly page.";
+      list.appendChild(hint);
+    }
+  }
+
+  function personHasPendingCarry(p) {
+    // True if their most recent locked week has unresolved questions or next-week notes
+    // that haven't yet been viewed/created into a following week, OR current open week
+    // shows carry items still unresolved.
+    var iso = latestWeekIso(p);
+    if (!iso) return false;
+    var w = p.weeks[iso];
+    if (!w) return false;
+    if (w.carryQuestions && w.carryQuestions.some(function(q){ return !q.resolved; })) return true;
+    return false;
+  }
+
+  function latestWeekIso(p) {
+    if (!p.weekOrder.length) return null;
+    return p.weekOrder[p.weekOrder.length - 1];
+  }
+
+  /* ---------------- Rendering: main panel ---------------- */
+  function renderAll() {
+    renderSidebar();
+    var person = getPerson(state.activePersonId);
+    var noState = document.getElementById("no-person-state");
+    var view = document.getElementById("person-view");
+
+    if (!person) {
+      noState.style.display = "";
+      view.style.display = "none";
+      return;
+    }
+    noState.style.display = "none";
+    view.style.display = "";
+
+    document.getElementById("person-name-display").textContent = person.name;
+    var weekCount = person.weekOrder.length;
+    document.getElementById("person-subline").textContent =
+      weekCount + (weekCount === 1 ? " week recorded" : " weeks recorded");
+
+    // Determine which week we're viewing
+    if (!viewingWeek[person.id]) {
+      var latest = latestWeekIso(person);
+      if (!latest) {
+        var thisWeek = currentWeekStartIso();
+        ensureWeek(person, thisWeek);
+        viewingWeek[person.id] = thisWeek;
+      } else {
+        viewingWeek[person.id] = latest;
+      }
+    }
+
+    var iso = viewingWeek[person.id];
+    var week = ensureWeek(person, iso);
+    renderWeek(person, week);
+  }
+
+  function renderWeek(person, week) {
+    document.getElementById("week-label").textContent = fmtWeekLabel(week.weekStart);
+
+    var pill = document.getElementById("week-status-pill");
+    if (week.locked) {
+      pill.textContent = "Locked";
+      pill.className = "pill-locked";
+    } else {
+      pill.textContent = "Open";
+      pill.className = "pill-open";
+    }
+
+    // nav buttons
+    var idx = person.weekOrder.indexOf(week.weekStart);
+    document.getElementById("prev-week-btn").disabled = idx <= 0;
+    document.getElementById("next-week-btn").disabled = idx >= person.weekOrder.length - 1;
+
+    // locked banner
+    var bannerSlot = document.getElementById("locked-banner-slot");
+    bannerSlot.innerHTML = "";
+    if (week.locked) {
+      var banner = document.createElement("div");
+      banner.className = "locked-banner";
+      banner.innerHTML = '<span><span class="lock-icon">&#128274;</span>This week is finalized. Unresolved items already carried forward.</span>';
+      bannerSlot.appendChild(banner);
+    }
+
+    // carry card
+    var carryCard = document.getElementById("carry-card");
+    var carryContent = document.getElementById("carry-content");
+    carryContent.innerHTML = "";
+    var hasCarryQ = week.carryQuestions && week.carryQuestions.length > 0;
+    var hasCarryN = week.carryNotes && week.carryNotes.length > 0;
+    if (hasCarryQ || hasCarryN) {
+      carryCard.style.display = "";
+      if (hasCarryQ) {
+        var qGroup = document.createElement("div");
+        qGroup.className = "carry-group";
+        var qTitle = document.createElement("div");
+        qTitle.className = "carry-group-title";
+        qTitle.textContent = "Unanswered questions";
+        qGroup.appendChild(qTitle);
+        week.carryQuestions.forEach(function (q) {
+          qGroup.appendChild(buildCarryItem(person, week, q, "carryQuestions"));
+        });
+        carryContent.appendChild(qGroup);
+      }
+      if (hasCarryN) {
+        var nGroup = document.createElement("div");
+        nGroup.className = "carry-group";
+        var nTitle = document.createElement("div");
+        nTitle.className = "carry-group-title";
+        nTitle.textContent = "Notes for this week";
+        nGroup.appendChild(nTitle);
+        week.carryNotes.forEach(function (n) {
+          nGroup.appendChild(buildCarryItem(person, week, n, "carryNotes"));
+        });
+        carryContent.appendChild(nGroup);
+      }
+    } else {
+      carryCard.style.display = "none";
+    }
+
+    // topics
+    renderItemList("topics-list", week.topics, person, week, "topics", "What are they working on?", false);
+    // questions
+    renderItemList("questions-list", week.questions, person, week, "questions", "What couldn't you answer?", true);
+    // next week notes
+    renderItemList("nextweek-list", week.nextWeekNotes, person, week, "nextWeekNotes", "What should you remember for next time?", false);
+
+    // notes
+    var notesArea = document.getElementById("notes-area");
+    notesArea.value = week.notes || "";
+    notesArea.oninput = function () {
+      week.notes = notesArea.value;
+      save();
+    };
+
+    // disable everything if locked
+    document.getElementById("week-fieldset").disabled = week.locked;
+    notesArea.disabled = week.locked;
+
+    // finalize / unlock buttons
+    document.getElementById("finalize-btn").style.display = week.locked ? "none" : "";
+    document.getElementById("unlock-btn").style.display = week.locked ? "" : "none";
+  }
+
+  function buildCarryItem(person, week, item, key) {
+    var row = document.createElement("div");
+    row.className = "carry-item" + (item.resolved ? " resolved-item" : "");
+    var checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = !!item.resolved;
+    checkbox.disabled = week.locked;
+    checkbox.title = "Mark as resolved";
+    checkbox.addEventListener("change", function () {
+      item.resolved = checkbox.checked;
+      save();
+      renderWeek(person, week);
+      renderSidebar();
+    });
+    var text = document.createElement("div");
+    text.className = "carry-item-text";
+    text.textContent = item.text;
+    row.appendChild(checkbox);
+    row.appendChild(text);
+    return row;
+  }
+
+  function renderItemList(listElId, items, person, week, key, placeholder, isQuestionList) {
+    var ul = document.getElementById(listElId);
+    ul.innerHTML = "";
+    items.forEach(function (item) {
+      var li = document.createElement("li");
+      li.className = "item-row" + (isQuestionList ? " question-row" : "") + (isQuestionList && item.resolved ? " answered" : "");
+
+      if (isQuestionList) {
+        var cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = !!item.resolved;
+        cb.title = "Mark as answered";
+        cb.addEventListener("change", function () {
+          item.resolved = cb.checked;
+          save();
+          renderItemList(listElId, items, person, week, key, placeholder, isQuestionList);
+        });
+        li.appendChild(cb);
+      } else {
+        var bullet = document.createElement("span");
+        bullet.className = "bullet";
+        bullet.textContent = "—";
+        li.appendChild(bullet);
+      }
+
+      var ta = document.createElement("textarea");
+      ta.value = item.text || "";
+      ta.placeholder = placeholder;
+      ta.rows = 1;
+      autoGrow(ta);
+      ta.addEventListener("input", function () {
+        item.text = ta.value;
+        autoGrow(ta);
+        save();
+      });
+      li.appendChild(ta);
+
+      var removeBtn = document.createElement("button");
+      removeBtn.className = "remove-item-btn";
+      removeBtn.type = "button";
+      removeBtn.title = "Remove";
+      removeBtn.innerHTML = "&times;";
+      removeBtn.addEventListener("click", function () {
+        var idx = items.indexOf(item);
+        if (idx > -1) items.splice(idx, 1);
+        save();
+        renderItemList(listElId, items, person, week, key, placeholder, isQuestionList);
+      });
+      li.appendChild(removeBtn);
+
+      ul.appendChild(li);
+    });
+  }
+
+  function autoGrow(ta) {
+    ta.style.height = "auto";
+    ta.style.height = ta.scrollHeight + "px";
+  }
+
+  /* ---------------- Actions ---------------- */
+  function addPerson(name) {
+    name = name.trim();
+    if (!name) return;
+    var p = { id: uid(), name: name, weeks: {}, weekOrder: [] };
+    var thisWeek = currentWeekStartIso();
+    ensureWeek(p, thisWeek);
+    state.people.push(p);
+    state.activePersonId = p.id;
+    viewingWeek[p.id] = thisWeek;
+    save();
+    renderAll();
+    showToast("Added " + name);
+  }
+
+  function finalizeWeek(person, week) {
+    if (week.locked) return;
+
+    // gather unresolved questions + next-week notes to carry forward
+    var carryQuestions = week.questions
+      .filter(function (q) { return q.text && q.text.trim() && !q.resolved; })
+      .map(function (q) { return { id: uid(), text: q.text.trim(), resolved: false }; });
+
+    var carryNotes = week.nextWeekNotes
+      .filter(function (n) { return n.text && n.text.trim(); })
+      .map(function (n) { return { id: uid(), text: n.text.trim() }; });
+
+    week.locked = true;
+    week._snapshotCarryQuestions = carryQuestions;
+    week._snapshotCarryNotes = carryNotes;
+
+    // create / get next week and populate its carry section
+    var nextIso = isoDate(addDays(new Date(week.weekStart + "T00:00:00"), 7));
+    var nextWeek = ensureWeek(person, nextIso);
+    if (carryQuestions.length || carryNotes.length) {
+      nextWeek.carryFrom = week.weekStart;
+      nextWeek.carryQuestions = nextWeek.carryQuestions.concat(carryQuestions);
+      nextWeek.carryNotes = nextWeek.carryNotes.concat(carryNotes);
+    }
+
+    viewingWeek[person.id] = nextIso;
+    save();
+    renderAll();
+    showToast("Week finalized — open items carried to next week.");
+  }
+
+  function unlockWeek(person, week) {
+    week.locked = false;
+    save();
+    renderAll();
+    showToast("Week unlocked.");
+  }
+
+  function showToast(msg) {
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = "toast show";
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(function () {
+      t.className = "toast";
+    }, 2400);
+  }
+
+  /* ---------------- Wire up events ---------------- */
+  document.getElementById("add-person-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = document.getElementById("new-person-input");
+    addPerson(input.value);
+    input.value = "";
+  });
+
+  document.getElementById("add-topic-btn").addEventListener("click", function () {
+    var person = getPerson(state.activePersonId);
+    var week = person.weeks[viewingWeek[person.id]];
+    if (week.locked) return;
+    week.topics.push({ id: uid(), text: "" });
+    save();
+    renderWeek(person, week);
+    focusLastTextarea("topics-list");
+  });
+
+  document.getElementById("add-question-btn").addEventListener("click", function () {
+    var person = getPerson(state.activePersonId);
+    var week = person.weeks[viewingWeek[person.id]];
+    if (week.locked) return;
+    week.questions.push({ id: uid(), text: "", resolved: false });
+    save();
+    renderWeek(person, week);
+    focusLastTextarea("questions-list");
+  });
+
+  document.getElementById("add-nextweek-btn").addEventListener("click", function () {
+    var person = getPerson(state.activePersonId);
+    var week = person.weeks[viewingWeek[person.id]];
+    if (week.locked) return;
+    week.nextWeekNotes.push({ id: uid(), text: "" });
+    save();
+    renderWeek(person, week);
+    focusLastTextarea("nextweek-list");
+  });
+
+  function focusLastTextarea(listId) {
+    var list = document.getElementById(listId);
+    var textareas = list.querySelectorAll("textarea");
+    if (textareas.length) textareas[textareas.length - 1].focus();
+  }
+
+  document.getElementById("prev-week-btn").addEventListener("click", function () {
+    var person = getPerson(state.activePersonId);
+    var idx = person.weekOrder.indexOf(viewingWeek[person.id]);
+    if (idx > 0) {
+      viewingWeek[person.id] = person.weekOrder[idx - 1];
+      renderAll();
+    }
+  });
+  document.getElementById("next-week-btn").addEventListener("click", function () {
+    var person = getPerson(state.activePersonId);
+    var idx = person.weekOrder.indexOf(viewingWeek[person.id]);
+    if (idx < person.weekOrder.length - 1) {
+      viewingWeek[person.id] = person.weekOrder[idx + 1];
+      renderAll();
+    }
+  });
+
+  document.getElementById("finalize-btn").addEventListener("click", function () {
+    var person = getPerson(state.activePersonId);
+    var week = person.weeks[viewingWeek[person.id]];
+    finalizeWeek(person, week);
+  });
+  document.getElementById("unlock-btn").addEventListener("click", function () {
+    var person = getPerson(state.activePersonId);
+    var week = person.weeks[viewingWeek[person.id]];
+    unlockWeek(person, week);
+  });
+
+  /* Rename modal */
+  var renameModal = document.getElementById("rename-modal");
+  document.getElementById("rename-btn").addEventListener("click", function () {
+    var person = getPerson(state.activePersonId);
+    document.getElementById("rename-input").value = person.name;
+    renameModal.classList.add("show");
+    setTimeout(function(){ document.getElementById("rename-input").focus(); }, 30);
+  });
+  document.getElementById("rename-cancel").addEventListener("click", function () {
+    renameModal.classList.remove("show");
+  });
+  document.getElementById("rename-confirm").addEventListener("click", function () {
+    var person = getPerson(state.activePersonId);
+    var val = document.getElementById("rename-input").value.trim();
+    if (val) {
+      person.name = val;
+      save();
+      renameModal.classList.remove("show");
+      renderAll();
+    }
+  });
+
+  /* Delete modal */
+  var deleteModal = document.getElementById("delete-modal");
+  document.getElementById("delete-person-btn").addEventListener("click", function () {
+    deleteModal.classList.add("show");
+  });
+  document.getElementById("delete-cancel").addEventListener("click", function () {
+    deleteModal.classList.remove("show");
+  });
+  document.getElementById("delete-confirm").addEventListener("click", function () {
+    var id = state.activePersonId;
+    state.people = state.people.filter(function (p) { return p.id !== id; });
+    delete viewingWeek[id];
+    state.activePersonId = state.people.length ? state.people[0].id : null;
+    save();
+    deleteModal.classList.remove("show");
+    renderAll();
+  });
+
+  [renameModal, deleteModal].forEach(function (modal) {
+    modal.addEventListener("click", function (e) {
+      if (e.target === modal) modal.classList.remove("show");
+    });
+  });
+
+  /* ---------------- Init ---------------- */
+  load();
+  if (!state.activePersonId && state.people.length) {
+    state.activePersonId = state.people[0].id;
+  }
+  renderAll();
+
+})();
+</script>
+</body>
+</html>
