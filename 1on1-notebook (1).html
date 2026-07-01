@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1-on-1 Notebook</title>
+<style>
+  :root {
+    --bg: #f6f4ef;
+    --bg-panel: #ffffff;
+    --bg-sidebar: #232220;
+    --ink: #232220;
+    --ink-soft: #6b6660;
+    --line: #e2ddd2;
+    --accent: #a8502f;
+    --accent-soft: #f1ddd2;
+    --good: #4f7a5c;
+    --good-soft: #e3ecdf;
+    --warn: #b8862e;
+    --warn-soft: #f5e9d3;
+    --locked: #6b6660;
+    --radius: 10px;
+    --sidebar-w: 240px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif; }
+  body { display: flex; min-height: 100vh; }
+
+  /* ---- Sidebar ---- */
+  #sidebar { width: var(--sidebar-w); flex-shrink: 0; background: var(--bg-sidebar); color: #ece8e1; display: flex; flex-direction: column; padding: 22px 16px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  #sidebar .brand { font-family: Georgia, serif; font-size: 18px; letter-spacing: 0.02em; font-weight: 600; margin-bottom: 4px; color: #fff; }
+  #sidebar .brand-sub { font-size: 11.5px; color: #a39c8f; margin-bottom: 22px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: 0.03em; text-transform: uppercase; }
+  #people-list { list-style: none; margin: 0; padding: 0; flex: 1; overflow-y: auto; }
+  #people-list li { margin-bottom: 4px; }
+  .person-btn { width: 100%; text-align: left; background: transparent; border: none; color: #d8d3c8; padding: 9px 10px; border-radius: 7px; cursor: pointer; font-size: 14.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: space-between; gap: 8px; transition: background 0.15s ease; }
+  .person-btn:hover { background: #34322e; }
+  .person-btn.active { background: var(--accent); color: #fff; }
+  .person-btn .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .person-btn .pending-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); flex-shrink: 0; display: none; }
+  .person-btn.has-pending .pending-dot { display: inline-block; }
+  .person-btn.active .pending-dot { background: #fff; }
+  #add-person-row { margin-top: 14px; padding-top: 14px; border-top: 1px solid #3a3833; }
+  #add-person-form { display: flex; gap: 6px; }
+  #new-person-input { flex: 1; background: #2c2a26; border: 1px solid #45423c; color: #fff; border-radius: 7px; padding: 8px 9px; font-size: 13.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-width: 0; }
+  #new-person-input::placeholder { color: #837d70; }
+  #new-person-input:focus { outline: 1px solid var(--accent); }
+  #add-person-form button { background: var(--accent); color: #fff; border: none; border-radius: 7px; padding: 8px 12px; font-size: 13.5px; cursor: pointer; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight: 600; }
+  #add-person-form button:hover { background: #8e4226; }
+  .empty-people-hint { color: #8d877a; font-size: 12.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 10px 4px; line-height: 1.5; }
+
+  /* ---- Main ---- */
+  #main { flex: 1; min-width: 0; padding: 36px 48px 80px; max-width: 880px; }
+  #no-person-state { margin-top: 80px; text-align: center; color: var(--ink-soft); }
+  #no-person-state h1 { font-size: 26px; margin-bottom: 8px; color: var(--ink); }
+  #no-person-state p { font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .person-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; gap: 16px; }
+  .person-header h1 { font-size: 30px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+  #rename-btn, #delete-person-btn { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12.5px; background: none; border: none; color: var(--ink-soft); cursor: pointer; text-decoration: underline; padding: 0; }
+  #rename-btn:hover, #delete-person-btn:hover { color: var(--accent); }
+  .person-subline { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--ink-soft); font-size: 13px; margin-bottom: 28px; }
+
+  /* Week nav */
+  #week-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .week-nav-btn { background: var(--bg-panel); border: 1px solid var(--line); border-radius: 7px; width: 32px; height: 32px; cursor: pointer; font-size: 15px; color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  .week-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .week-nav-btn:disabled { opacity: 0.35; cursor: default; }
+  .week-nav-btn:disabled:hover { border-color: var(--line); color: var(--ink); }
+  #week-label { font-size: 14.5px; font-weight: 600; flex: 1; text-align: center; color: var(--ink); }
+  #week-status-pill { font-size: 11.5px; padding: 3px 9px; border-radius: 20px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
+  .pill-open { background: var(--good-soft); color: var(--good); }
+  .pill-locked { background: #ece9e2; color: var(--locked); }
+
+  /* Meeting date row */
+  .meeting-date-row { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; color: var(--ink-soft); }
+  .meeting-date-row label { white-space: nowrap; }
+  .meeting-date-row input[type=date] { border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font-size: 13px; background: var(--bg-panel); color: var(--ink); font-family: inherit; }
+  .meeting-date-row input[type=date]:focus { outline: 1px solid var(--accent); }
+
+  /* Cards */
+  .card { background: var(--bg-panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; margin-bottom: 18px; }
+  .card-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .card-title h2 { font-size: 15.5px; margin: 0; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: 0.01em; }
+  .card-title .count-badge { font-size: 11.5px; color: var(--ink-soft); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); border: 1px solid var(--line); border-radius: 20px; padding: 1px 7px; }
+  .card-hint { font-size: 12.5px; color: var(--ink-soft); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin-bottom: 12px; }
+
+  /* From last week */
+  .carry-card { background: var(--warn-soft); border: 1px solid #e6cd96; }
+  .carry-label { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #8a611f; font-weight: 700; margin-bottom: 10px; display: inline-block; }
+  .carry-group { margin-bottom: 14px; }
+  .carry-group:last-child { margin-bottom: 0; }
+  .carry-group-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12.5px; font-weight: 700; color: #6b4c14; margin-bottom: 6px; }
+  .carry-item { background: rgba(255,255,255,0.55); border: 1px solid #e6cd96; border-radius: 7px; padding: 8px 10px; font-size: 14px; margin-bottom: 6px; display: flex; align-items: flex-start; gap: 8px; }
+  .carry-item input[type=checkbox] { margin-top: 3px; accent-color: var(--accent); cursor: pointer; }
+  .carry-item.resolved-item .carry-item-text { text-decoration: line-through; color: var(--ink-soft); }
+  .carry-item-text { flex: 1; line-height: 1.4; }
+
+  /* Item lists */
+  .item-list { list-style: none; margin: 0 0 10px 0; padding: 0; }
+  .item-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); position: relative; }
+  .item-row:last-child { border-bottom: none; }
+
+  .item-row textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    resize: none;
+    font-family: inherit;
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--ink);
+    padding: 1px 0;
+    overflow: hidden;
+    min-height: 24px;
+  }
+  .item-row textarea:focus { outline: none; }
+  .item-row textarea::placeholder { color: #b9b2a4; }
+
+  .item-row .bullet { color: var(--accent); font-size: 15px; line-height: 1.7; margin-top: 0; user-select: none; flex-shrink: 0; }
+  .remove-item-btn { background: none; border: none; color: #c7c0b3; cursor: pointer; font-size: 16px; line-height: 1; padding: 3px 4px; border-radius: 4px; flex-shrink: 0; opacity: 0; transition: opacity 0.1s; }
+  .item-row:hover .remove-item-btn { opacity: 1; }
+  .remove-item-btn:hover { color: var(--accent); background: var(--accent-soft); opacity: 1; }
+
+  .add-item-btn { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: none; border: 1px dashed var(--line); color: var(--ink-soft); border-radius: 7px; padding: 7px 12px; font-size: 13px; cursor: pointer; width: 100%; text-align: left; transition: all 0.12s; }
+  .add-item-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+  /* Question rows */
+  .item-row.question-row input[type=checkbox] { margin-top: 4px; accent-color: var(--good); cursor: pointer; flex-shrink: 0; }
+  .item-row.question-row.answered textarea { text-decoration: line-through; color: var(--ink-soft); }
+
+  /* Notes */
+  #notes-area { width: 100%; min-height: 120px; border: 1px solid var(--line); border-radius: 7px; padding: 12px; font-family: inherit; font-size: 14.5px; line-height: 1.5; color: var(--ink); resize: vertical; background: #fdfcf9; }
+  #notes-area:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
+  /* Finalize bar */
+  #finalize-bar { position: sticky; bottom: 0; background: linear-gradient(to top, var(--bg) 60%, rgba(246,244,239,0)); padding: 18px 0 4px; margin-top: 6px; display: flex; justify-content: flex-end; gap: 10px; }
+  .btn { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600; padding: 10px 18px; border-radius: 8px; cursor: pointer; border: none; }
+  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 6px rgba(168,80,47,0.25); }
+  .btn-primary:hover { background: #8e4226; }
+  .btn-secondary { background: var(--bg-panel); border: 1px solid var(--line); color: var(--ink); }
+  .btn-secondary:hover { border-color: var(--ink-soft); }
+
+  .locked-banner { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; color: var(--locked); background: #ece9e2; border-radius: 7px; padding: 10px 14px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+  fieldset.week-fieldset { border: none; margin: 0; padding: 0; }
+  fieldset.week-fieldset[disabled] .card { opacity: 0.88; }
+  fieldset.week-fieldset[disabled] textarea,
+  fieldset.week-fieldset[disabled] #notes-area { color: var(--ink-soft); }
+  fieldset.week-fieldset[disabled] .add-item-btn,
+  fieldset.week-fieldset[disabled] .remove-item-btn { display: none; }
+  fieldset.week-fieldset[disabled] .meeting-date-row input { pointer-events: none; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(35,34,32,0.45); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .modal-overlay.show { display: flex; }
+  .modal-box { background: var(--bg-panel); border-radius: 12px; padding: 24px 26px; width: 360px; box-shadow: 0 12px 40px rgba(0,0,0,0.2); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .modal-box h3 { margin: 0 0 8px; font-family: Georgia, serif; font-size: 18px; }
+  .modal-box p { font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; margin: 0 0 18px; }
+  .modal-box input[type=text] { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 7px; font-size: 14px; margin-bottom: 16px; font-family: inherit; }
+  .modal-box input[type=text]:focus { outline: 1px solid var(--accent); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13.5px; opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; z-index: 100; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Drag handle */
+  .drag-handle { cursor: grab; color: #ccc; font-size: 13px; line-height: 1.7; padding: 0 2px; user-select: none; flex-shrink: 0; }
+  .drag-handle:active { cursor: grabbing; }
+  .item-row.dragging { opacity: 0.4; }
+  .item-row.drag-over { border-top: 2px solid var(--accent); }
+
+  /* Keyboard hint */
+  .keyboard-hint { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; color: #bbb; margin-top: -6px; margin-bottom: 8px; }
+
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #sidebar { width: 100%; height: auto; position: relative; flex-direction: row; align-items: center; overflow-x: auto; padding: 14px 16px; }
+    #sidebar .brand, #sidebar .brand-sub { display: none; }
+    #people-list { display: flex; flex: none; gap: 6px; overflow-x: auto; }
+    #people-list li { margin-bottom: 0; }
+    #add-person-row { margin: 0 0 0 10px; padding: 0; border: none; flex-shrink: 0; }
+    #add-person-form { width: 200px; }
+    #main { padding: 24px 18px 60px; max-width: 100%; }
+  }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">1-on-1 Notebook</div>
+  <div class="brand-sub">Weekly check-ins</div>
+  <ul id="people-list"></ul>
+  <div id="add-person-row">
+    <form id="add-person-form">
+      <input type="text" id="new-person-input" placeholder="Add a person…" maxlength="60" autocomplete="off">
+      <button type="submit">Add</button>
+    </form>
+  </div>
+</nav>
+
+<main id="main">
+  <div id="no-person-state">
+    <h1>No one here yet</h1>
+    <p>Add the first person you meet with using the sidebar.</p>
+  </div>
+
+  <div id="person-view" style="display:none;">
+    <div class="person-header">
+      <h1 id="person-name-display"></h1>
+      <div style="display:flex;gap:14px;">
+        <button id="rename-btn" type="button">Rename</button>
+        <button id="delete-person-btn" type="button">Remove person</button>
+      </div>
+    </div>
+    <div class="person-subline" id="person-subline"></div>
+
+    <div id="week-nav">
+      <button class="week-nav-btn" id="prev-week-btn" title="Previous week">&#8249;</button>
+      <div id="week-label">Week of —</div>
+      <span id="week-status-pill" class="pill-open">Open</span>
+      <button class="week-nav-btn" id="next-week-btn" title="Next week">&#8250;</button>
+    </div>
+
+    <div id="locked-banner-slot"></div>
+
+    <fieldset class="week-fieldset" id="week-fieldset">
+
+      <div class="meeting-date-row">
+        <label for="meeting-date-input">📅 Meeting date:</label>
+        <input type="date" id="meeting-date-input">
+      </div>
+
+      <div class="card carry-card" id="carry-card" style="display:none;">
+        <span class="carry-label">From last week</span>
+        <div id="carry-content"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Discussion topics</h2>
+          <span class="count-badge" id="topics-count"></span>
+        </div>
+        <div class="card-hint">What they're working on, anything brought up this week.</div>
+        <ul class="item-list" id="topics-list"></ul>
+        <div class="keyboard-hint">Press Enter on any item to add another</div>
+        <button class="add-item-btn" id="add-topic-btn" type="button">+ Add a topic</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Unanswered questions</h2>
+          <span class="count-badge" id="questions-count"></span>
+        </div>
+        <div class="card-hint">Couldn't answer yet — check the box once resolved, or it'll carry to next week.</div>
+        <ul class="item-list" id="questions-list"></ul>
+        <div class="keyboard-hint">Press Enter on any item to add another</div>
+        <button class="add-item-btn" id="add-question-btn" type="button">+ Add a question</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>To note for next week</h2>
+          <span class="count-badge" id="nextweek-count"></span>
+        </div>
+        <div class="card-hint">Things to remember or bring up at the next 1-on-1.</div>
+        <ul class="item-list" id="nextweek-list"></ul>
+        <div class="keyboard-hint">Press Enter on any item to add another</div>
+        <button class="add-item-btn" id="add-nextweek-btn" type="button">+ Add a note for next week</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Notes</h2>
+        </div>
+        <div class="card-hint">Freeform — anything else worth keeping.</div>
+        <textarea id="notes-area" placeholder="Type general notes here…"></textarea>
+      </div>
+
+    </fieldset>
+
+    <div id="finalize-bar">
+      <button class="btn btn-secondary" id="unlock-btn" type="button" style="display:none;">Unlock this week</button>
+      <button class="btn btn-primary" id="finalize-btn" type="button">Finalize week</button>
+    </div>
+  </div>
+</main>
+
+<!-- Rename modal -->
+<div class="modal-overlay" id="rename-modal">
+  <div class="modal-box">
+    <h3>Rename</h3>
+    <p>Update this person's name. Their history stays intact.</p>
+    <input type="text" id="rename-input" maxlength="60">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="rename-cancel" type="button">Cancel</button>
+      <button class="btn btn-primary" id="rename-confirm" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete modal -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal-box">
+    <h3>Remove this person?</h3>
+    <p>This deletes all of their weekly notes permanently. This can't be undone.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="delete-cancel" type="button">Cancel</button>
+      <button class="btn btn-primary" id="delete-confirm" type="button" style="background:#a8502f;">Remove</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "oneonone_notebook_v2";
+
+  /* ---- Date helpers ---- */
+  function startOfWeek(d) {
+    var date = new Date(d);
+    var day = date.getDay();
+    var diff = (day === 0 ? -6 : 1 - day);
+    date.setDate(date.getDate() + diff);
+    date.setHours(0,0,0,0);
+    return date;
+  }
+  function isoDate(d) {
+    var date = new Date(d);
+    date.setHours(0,0,0,0);
+    return date.getFullYear() + "-" + String(date.getMonth()+1).padStart(2,'0') + "-" + String(date.getDate()).padStart(2,'0');
+  }
+  function addDays(d, n) {
+    var date = new Date(d);
+    date.setDate(date.getDate() + n);
+    return date;
+  }
+  function fmtWeekLabel(weekStartIso) {
+    var start = new Date(weekStartIso + "T00:00:00");
+    var end = addDays(start, 6);
+    var opts = { month: 'short', day: 'numeric' };
+    return "Week of " + start.toLocaleDateString(undefined, opts) + " – " + end.toLocaleDateString(undefined, opts) + ", " + start.getFullYear();
+  }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+  /* ---- State ---- */
+  var state = { people: [], activePersonId: null };
+  var viewingWeek = {};
+
+  function emptyWeek(iso) {
+    return { weekStart: iso, locked: false, meetingDate: "", topics: [], questions: [], nextWeekNotes: [], notes: "", carryQuestions: [], carryNotes: [] };
+  }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) { var p = JSON.parse(raw); if (p && Array.isArray(p.people)) { state = p; return; } }
+      // Try migrating from v1
+      var old = localStorage.getItem("oneonone_notebook_v1");
+      if (old) { var op = JSON.parse(old); if (op && Array.isArray(op.people)) { state = op; save(); } }
+    } catch(e) { console.error(e); }
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch(e) { showToast("Couldn't save — storage may be full."); }
+  }
+
+  function getPerson(id) { return state.people.find(function(p){ return p.id === id; }) || null; }
+
+  function currentWeekStartIso() { return isoDate(startOfWeek(new Date())); }
+
+  function ensureWeek(person, iso) {
+    if (!person.weeks[iso]) {
+      person.weeks[iso] = emptyWeek(iso);
+      person.weekOrder.push(iso);
+      person.weekOrder.sort();
+    }
+    return person.weeks[iso];
+  }
+
+  /* ---- Sidebar ---- */
+  function renderSidebar() {
+    var list = document.getElementById("people-list");
+    list.innerHTML = "";
+    if (!state.people.length) {
+      var hint = document.createElement("div");
+      hint.className = "empty-people-hint";
+      hint.textContent = "Add someone you meet with regularly to start tracking.";
+      list.appendChild(hint);
+      return;
+    }
+    state.people.forEach(function(p) {
+      var li = document.createElement("li");
+      var btn = document.createElement("button");
+      var isActive = p.id === state.activePersonId;
+      var hasPending = hasUnresolvedCarry(p);
+      btn.className = "person-btn" + (isActive ? " active" : "") + (hasPending ? " has-pending" : "");
+
+      var nm = document.createElement("span"); nm.className = "nm"; nm.textContent = p.name;
+      var dot = document.createElement("span"); dot.className = "pending-dot"; dot.title = "Unresolved carry-overs";
+      btn.appendChild(nm); btn.appendChild(dot);
+      btn.addEventListener("click", function() { state.activePersonId = p.id; save(); renderAll(); });
+      li.appendChild(btn); list.appendChild(li);
+    });
+  }
+
+  function hasUnresolvedCarry(p) {
+    var iso = p.weekOrder[p.weekOrder.length - 1];
+    if (!iso) return false;
+    var w = p.weeks[iso];
+    return w && w.carryQuestions && w.carryQuestions.some(function(q){ return !q.resolved; });
+  }
+
+  /* ---- Main render ---- */
+  function renderAll() {
+    renderSidebar();
+    var person = getPerson(state.activePersonId);
+    document.getElementById("no-person-state").style.display = person ? "none" : "";
+    document.getElementById("person-view").style.display = person ? "" : "none";
+    if (!person) return;
+
+    document.getElementById("person-name-display").textContent = person.name;
+    var wc = person.weekOrder.length;
+    document.getElementById("person-subline").textContent = wc + (wc === 1 ? " week recorded" : " weeks recorded");
+
+    if (!viewingWeek[person.id]) {
+      var latest = person.weekOrder[person.weekOrder.length - 1];
+      if (!latest) { var tw = currentWeekStartIso(); ensureWeek(person, tw); viewingWeek[person.id] = tw; save(); }
+      else viewingWeek[person.id] = latest;
+    }
+
+    renderWeek(person, person.weeks[viewingWeek[person.id]]);
+  }
+
+  function renderWeek(person, week) {
+    document.getElementById("week-label").textContent = fmtWeekLabel(week.weekStart);
+    var pill = document.getElementById("week-status-pill");
+    pill.textContent = week.locked ? "Locked" : "Open";
+    pill.className = week.locked ? "pill-locked" : "pill-open";
+
+    var idx = person.weekOrder.indexOf(week.weekStart);
+    document.getElementById("prev-week-btn").disabled = idx <= 0;
+    document.getElementById("next-week-btn").disabled = idx >= person.weekOrder.length - 1;
+
+    // Locked banner
+    var slot = document.getElementById("locked-banner-slot");
+    slot.innerHTML = "";
+    if (week.locked) {
+      var banner = document.createElement("div");
+      banner.className = "locked-banner";
+      banner.innerHTML = '<span>&#128274; This week is finalized.</span>';
+      slot.appendChild(banner);
+    }
+
+    // Meeting date
+    var dateInput = document.getElementById("meeting-date-input");
+    dateInput.value = week.meetingDate || "";
+    dateInput.onchange = function() { week.meetingDate = dateInput.value; save(); };
+
+    // Carry card
+    renderCarryCard(person, week);
+
+    // Item lists — full re-render only on week switch, not on every keystroke
+    buildItemList("topics-list", "topics-count", week.topics, person, week, "topics", "Topic or project to discuss…", false);
+    buildItemList("questions-list", "questions-count", week.questions, person, week, "questions", "What couldn't you answer?", true);
+    buildItemList("nextweek-list", "nextweek-count", week.nextWeekNotes, person, week, "nextWeekNotes", "What to bring up next time…", false);
+
+    var na = document.getElementById("notes-area");
+    na.value = week.notes || "";
+    na.disabled = week.locked;
+    na.onchange = na.oninput = function() { week.notes = na.value; save(); };
+
+    document.getElementById("week-fieldset").disabled = week.locked;
+    document.getElementById("finalize-btn").style.display = week.locked ? "none" : "";
+    document.getElementById("unlock-btn").style.display = week.locked ? "" : "none";
+  }
+
+  function renderCarryCard(person, week) {
+    var card = document.getElementById("carry-card");
+    var content = document.getElementById("carry-content");
+    content.innerHTML = "";
+    var hasQ = week.carryQuestions && week.carryQuestions.length > 0;
+    var hasN = week.carryNotes && week.carryNotes.length > 0;
+    if (!hasQ && !hasN) { card.style.display = "none"; return; }
+    card.style.display = "";
+
+    if (hasQ) {
+      var qg = document.createElement("div"); qg.className = "carry-group";
+      var qt = document.createElement("div"); qt.className = "carry-group-title"; qt.textContent = "Unanswered questions";
+      qg.appendChild(qt);
+      week.carryQuestions.forEach(function(q) { qg.appendChild(buildCarryItem(person, week, q)); });
+      content.appendChild(qg);
+    }
+    if (hasN) {
+      var ng = document.createElement("div"); ng.className = "carry-group";
+      var nt = document.createElement("div"); nt.className = "carry-group-title"; nt.textContent = "Notes for this week";
+      ng.appendChild(nt);
+      week.carryNotes.forEach(function(n) { ng.appendChild(buildCarryItem(person, week, n)); });
+      content.appendChild(ng);
+    }
+  }
+
+  function buildCarryItem(person, week, item) {
+    var row = document.createElement("div");
+    row.className = "carry-item" + (item.resolved ? " resolved-item" : "");
+    var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!item.resolved; cb.disabled = week.locked;
+    cb.addEventListener("change", function() {
+      item.resolved = cb.checked; save();
+      row.className = "carry-item" + (item.resolved ? " resolved-item" : "");
+      var textEl = row.querySelector(".carry-item-text");
+      // re-apply class
+      renderSidebar();
+    });
+    var txt = document.createElement("div"); txt.className = "carry-item-text"; txt.textContent = item.text;
+    row.appendChild(cb); row.appendChild(txt);
+    return row;
+  }
+
+  /* ----
+     buildItemList: creates DOM rows without re-rendering on every keystroke.
+     Each textarea's oninput directly updates the data object.
+     Enter key inserts a new item after the current one and focuses it.
+  ---- */
+  function buildItemList(listId, countId, items, person, week, key, placeholder, isQuestion) {
+    var ul = document.getElementById(listId);
+    ul.innerHTML = "";
+    updateCount(countId, items);
+
+    items.forEach(function(item, index) {
+      ul.appendChild(buildItemRow(item, index, items, listId, countId, person, week, key, placeholder, isQuestion));
+    });
+  }
+
+  function buildItemRow(item, index, items, listId, countId, person, week, key, placeholder, isQuestion) {
+    var li = document.createElement("li");
+    li.className = "item-row" + (isQuestion ? " question-row" : "") + (isQuestion && item.resolved ? " answered" : "");
+    li.setAttribute("draggable", !week.locked);
+    li.dataset.itemId = item.id;
+
+    // Drag handle
+    if (!week.locked) {
+      var dh = document.createElement("span");
+      dh.className = "drag-handle";
+      dh.innerHTML = "&#8942;";
+      dh.title = "Drag to reorder";
+      li.appendChild(dh);
+      attachDragEvents(li, items, listId, countId, person, week, key, placeholder, isQuestion);
+    }
+
+    // Checkbox (questions) or bullet (others)
+    if (isQuestion) {
+      var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!item.resolved;
+      cb.addEventListener("change", function() {
+        item.resolved = cb.checked;
+        li.className = "item-row question-row" + (item.resolved ? " answered" : "");
+        save();
+      });
+      li.appendChild(cb);
+    } else {
+      var bullet = document.createElement("span"); bullet.className = "bullet"; bullet.textContent = "—";
+      li.appendChild(bullet);
+    }
+
+    // Textarea — key fix: oninput updates data directly, NO re-render
+    var ta = document.createElement("textarea");
+    ta.value = item.text || "";
+    ta.placeholder = placeholder;
+    ta.rows = 1;
+    ta.disabled = week.locked;
+    autoGrow(ta);
+
+    ta.addEventListener("input", function() {
+      item.text = ta.value;
+      autoGrow(ta);
+      save();
+    });
+
+    // Enter key = new item after this one
+    ta.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (week.locked) return;
+        var curIdx = items.indexOf(item);
+        var newItem = isQuestion ? { id: uid(), text: "", resolved: false } : { id: uid(), text: "" };
+        items.splice(curIdx + 1, 0, newItem);
+        save();
+        // Insert new row after this li
+        var ul = document.getElementById(listId);
+        var newLi = buildItemRow(newItem, curIdx + 1, items, listId, countId, person, week, key, placeholder, isQuestion);
+        if (li.nextSibling) ul.insertBefore(newLi, li.nextSibling);
+        else ul.appendChild(newLi);
+        updateCount(countId, items);
+        var newTa = newLi.querySelector("textarea");
+        if (newTa) { newTa.focus(); autoGrow(newTa); }
+      }
+      // Backspace on empty item = remove it and focus previous
+      if (e.key === "Backspace" && ta.value === "" && items.length > 1) {
+        e.preventDefault();
+        if (week.locked) return;
+        var curIdx2 = items.indexOf(item);
+        items.splice(curIdx2, 1);
+        save();
+        var ul2 = document.getElementById(listId);
+        ul2.removeChild(li);
+        updateCount(countId, items);
+        // focus previous or next
+        var rows = ul2.querySelectorAll("textarea");
+        var focusIdx = Math.max(0, curIdx2 - 1);
+        if (rows[focusIdx]) rows[focusIdx].focus();
+      }
+    });
+
+    li.appendChild(ta);
+
+    // Remove button
+    var rm = document.createElement("button");
+    rm.className = "remove-item-btn"; rm.type = "button"; rm.title = "Remove"; rm.innerHTML = "&times;";
+    rm.addEventListener("click", function() {
+      var idx2 = items.indexOf(item);
+      if (idx2 > -1) items.splice(idx2, 1);
+      save();
+      var ul3 = document.getElementById(listId);
+      ul3.removeChild(li);
+      updateCount(countId, items);
+    });
+    li.appendChild(rm);
+
+    return li;
+  }
+
+  function updateCount(countId, items) {
+    var el = document.getElementById(countId);
+    if (!el) return;
+    var nonEmpty = items.filter(function(i){ return i.text && i.text.trim(); }).length;
+    el.textContent = nonEmpty || "";
+    el.style.display = nonEmpty ? "" : "none";
+  }
+
+  function autoGrow(ta) {
+    ta.style.height = "auto";
+    ta.style.height = (ta.scrollHeight) + "px";
+  }
+
+  /* ---- Drag & drop reorder ---- */
+  var dragSrc = null;
+
+  function attachDragEvents(li, items, listId, countId, person, week, key, placeholder, isQuestion) {
+    li.addEventListener("dragstart", function(e) {
+      dragSrc = li;
+      li.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+    li.addEventListener("dragend", function() {
+      li.classList.remove("dragging");
+      document.querySelectorAll(".item-row.drag-over").forEach(function(el){ el.classList.remove("drag-over"); });
+    });
+    li.addEventListener("dragover", function(e) {
+      e.preventDefault();
+      if (dragSrc && dragSrc !== li) {
+        document.querySelectorAll(".item-row.drag-over").forEach(function(el){ el.classList.remove("drag-over"); });
+        li.classList.add("drag-over");
+      }
+    });
+    li.addEventListener("drop", function(e) {
+      e.preventDefault();
+      li.classList.remove("drag-over");
+      if (!dragSrc || dragSrc === li) return;
+      var ul = document.getElementById(listId);
+      var allLis = Array.from(ul.querySelectorAll("li"));
+      var fromIdx = allLis.indexOf(dragSrc);
+      var toIdx = allLis.indexOf(li);
+      if (fromIdx === -1 || toIdx === -1) return;
+      // Reorder data
+      var moved = items.splice(fromIdx, 1)[0];
+      items.splice(toIdx, 0, moved);
+      save();
+      // Reorder DOM
+      if (fromIdx < toIdx) ul.insertBefore(dragSrc, li.nextSibling);
+      else ul.insertBefore(dragSrc, li);
+    });
+  }
+
+  /* ---- Add buttons ---- */
+  function addItem(listId, countId, items, person, week, key, placeholder, isQuestion) {
+    if (week.locked) return;
+    var newItem = isQuestion ? { id: uid(), text: "", resolved: false } : { id: uid(), text: "" };
+    items.push(newItem);
+    save();
+    var ul = document.getElementById(listId);
+    var newLi = buildItemRow(newItem, items.length - 1, items, listId, countId, person, week, key, placeholder, isQuestion);
+    ul.appendChild(newLi);
+    updateCount(countId, items);
+    var ta = newLi.querySelector("textarea");
+    if (ta) ta.focus();
+  }
+
+  /* ---- Finalize / Unlock ---- */
+  function finalizeWeek(person, week) {
+    if (week.locked) return;
+    var carryQ = week.questions.filter(function(q){ return q.text && q.text.trim() && !q.resolved; }).map(function(q){ return { id: uid(), text: q.text.trim(), resolved: false }; });
+    var carryN = week.nextWeekNotes.filter(function(n){ return n.text && n.text.trim(); }).map(function(n){ return { id: uid(), text: n.text.trim() }; });
+    week.locked = true;
+    var nextIso = isoDate(addDays(new Date(week.weekStart + "T00:00:00"), 7));
+    var next = ensureWeek(person, nextIso);
+    if (carryQ.length || carryN.length) {
+      next.carryQuestions = (next.carryQuestions || []).concat(carryQ);
+      next.carryNotes = (next.carryNotes || []).concat(carryN);
+    }
+    viewingWeek[person.id] = nextIso;
+    save(); renderAll();
+    showToast("Week finalized — open items carried forward.");
+  }
+
+  function unlockWeek(person, week) {
+    week.locked = false;
+    save(); renderAll();
+    showToast("Week unlocked.");
+  }
+
+  /* ---- Toast ---- */
+  function showToast(msg) {
+    var t = document.getElementById("toast");
+    t.textContent = msg; t.className = "toast show";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ t.className = "toast"; }, 2600);
+  }
+
+  /* ---- Wire up static buttons ---- */
+  document.getElementById("add-person-form").addEventListener("submit", function(e) {
+    e.preventDefault();
+    var inp = document.getElementById("new-person-input");
+    var name = inp.value.trim();
+    if (!name) return;
+    var p = { id: uid(), name: name, weeks: {}, weekOrder: [] };
+    var tw = currentWeekStartIso();
+    ensureWeek(p, tw);
+    state.people.push(p);
+    state.activePersonId = p.id;
+    viewingWeek[p.id] = tw;
+    save(); inp.value = ""; renderAll();
+    showToast("Added " + name);
+  });
+
+  document.getElementById("add-topic-btn").addEventListener("click", function() {
+    var p = getPerson(state.activePersonId); var w = p.weeks[viewingWeek[p.id]];
+    addItem("topics-list", "topics-count", w.topics, p, w, "topics", "Topic or project to discuss…", false);
+  });
+  document.getElementById("add-question-btn").addEventListener("click", function() {
+    var p = getPerson(state.activePersonId); var w = p.weeks[viewingWeek[p.id]];
+    addItem("questions-list", "questions-count", w.questions, p, w, "questions", "What couldn't you answer?", true);
+  });
+  document.getElementById("add-nextweek-btn").addEventListener("click", function() {
+    var p = getPerson(state.activePersonId); var w = p.weeks[viewingWeek[p.id]];
+    addItem("nextweek-list", "nextweek-count", w.nextWeekNotes, p, w, "nextWeekNotes", "What to bring up next time…", false);
+  });
+
+  document.getElementById("prev-week-btn").addEventListener("click", function() {
+    var p = getPerson(state.activePersonId);
+    var idx = p.weekOrder.indexOf(viewingWeek[p.id]);
+    if (idx > 0) { viewingWeek[p.id] = p.weekOrder[idx-1]; renderAll(); }
+  });
+  document.getElementById("next-week-btn").addEventListener("click", function() {
+    var p = getPerson(state.activePersonId);
+    var idx = p.weekOrder.indexOf(viewingWeek[p.id]);
+    if (idx < p.weekOrder.length - 1) { viewingWeek[p.id] = p.weekOrder[idx+1]; renderAll(); }
+  });
+
+  document.getElementById("finalize-btn").addEventListener("click", function() {
+    var p = getPerson(state.activePersonId); finalizeWeek(p, p.weeks[viewingWeek[p.id]]);
+  });
+  document.getElementById("unlock-btn").addEventListener("click", function() {
+    var p = getPerson(state.activePersonId); unlockWeek(p, p.weeks[viewingWeek[p.id]]);
+  });
+
+  /* Rename modal */
+  var renameModal = document.getElementById("rename-modal");
+  document.getElementById("rename-btn").addEventListener("click", function() {
+    var p = getPerson(state.activePersonId);
+    document.getElementById("rename-input").value = p.name;
+    renameModal.classList.add("show");
+    setTimeout(function(){ document.getElementById("rename-input").focus(); }, 30);
+  });
+  document.getElementById("rename-cancel").addEventListener("click", function(){ renameModal.classList.remove("show"); });
+  document.getElementById("rename-confirm").addEventListener("click", function() {
+    var p = getPerson(state.activePersonId);
+    var v = document.getElementById("rename-input").value.trim();
+    if (v) { p.name = v; save(); renameModal.classList.remove("show"); renderAll(); }
+  });
+
+  /* Delete modal */
+  var deleteModal = document.getElementById("delete-modal");
+  document.getElementById("delete-person-btn").addEventListener("click", function(){ deleteModal.classList.add("show"); });
+  document.getElementById("delete-cancel").addEventListener("click", function(){ deleteModal.classList.remove("show"); });
+  document.getElementById("delete-confirm").addEventListener("click", function() {
+    var id = state.activePersonId;
+    state.people = state.people.filter(function(p){ return p.id !== id; });
+    delete viewingWeek[id];
+    state.activePersonId = state.people.length ? state.people[0].id : null;
+    save(); deleteModal.classList.remove("show"); renderAll();
+  });
+
+  [renameModal, deleteModal].forEach(function(m) {
+    m.addEventListener("click", function(e){ if (e.target === m) m.classList.remove("show"); });
+  });
+
+  /* Rename modal Enter key */
+  document.getElementById("rename-input").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") document.getElementById("rename-confirm").click();
+  });
+
+  /* ---- Init ---- */
+  load();
+  if (!state.activePersonId && state.people.length) state.activePersonId = state.people[0].id;
+  renderAll();
+
+})();
+</script>
+</body>
+</html>
